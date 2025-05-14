@@ -1,0 +1,58 @@
+char ssid[] = "Sarvesh's Galaxy Note 10";
+char pass[] = "sbwh6382";
+#define BLYNK_TEMPLATE_ID "TMPL3FS1TPwgH"
+#define BLYNK_TEMPLATE_NAME "Quickstart Template"
+#define BLYNK_AUTH_TOKEN "Cux1uF5dWndVdWwGcDARnK2Geixfd7j3"
+#include <SoftwareSerial.h>
+#include <DFRobotDFPlayerMini.h>
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+char auth[] = BLYNK_AUTH_TOKEN;
+
+
+SoftwareSerial mySerial(D7, D6); // DFPlayer RX, TX
+DFRobotDFPlayerMini myDFPlayer;
+
+const int smokeAnalogPin = A0;
+int smokeThreshold = 500; // Set based on sensor behavior
+
+bool alarmTriggered = false;
+
+void setup() {
+  Serial.begin(9600);
+  mySerial.begin(9600);
+
+  Blynk.begin(auth, ssid, pass);
+
+  if (!myDFPlayer.begin(mySerial)) {
+    Serial.println("DFPlayer failed!");
+    while (true);
+  }
+
+  myDFPlayer.volume(30); // 0 to 30
+  Serial.println("DFPlayer ready");
+}
+
+void loop() {
+  Blynk.run();
+
+  int smokeValue = analogRead(smokeAnalogPin);
+  Serial.print("Smoke Level: ");
+  Serial.println(smokeValue);
+
+  Blynk.virtualWrite(V2, smokeValue);
+
+  if (smokeValue > smokeThreshold && !alarmTriggered) {
+    myDFPlayer.play(1); // Play warning sound
+    Blynk.logEvent("smoke_alert", "Smoke detected!");
+    alarmTriggered = true;
+  }
+
+  // Reset alarm after safe level
+  if (smokeValue < smokeThreshold - 50) {
+    alarmTriggered = false;
+  }
+
+  delay(1000);
+}
